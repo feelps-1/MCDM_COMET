@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-from backend.app.comet.characteristic_objects import (
+from app.comet.characteristic_objects import (
     CharacteristicObject,
     CharacteristicObjectSet
 )
-from backend.app.comet.preference_vector import PreferenceVector
+from app.comet.preference_vector import PreferenceVector
 
 @dataclass(frozen=True)
 class CharacteristicRule:

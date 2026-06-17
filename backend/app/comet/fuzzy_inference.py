@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from backend.app.comet.characteristic_function import CharacteristicFunction
-from backend.app.comet.problem_space import ProblemSpace
+from app.comet.characteristic_function import CharacteristicFunction
+from app.comet.problem_space import ProblemSpace
 
 @dataclass(frozen=True)
 class ActivatedRule:

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from math import prod
 
-from backend.app.comet.membership_function import triangular_membership, validate_triangular_params
+from app.comet.membership_function import triangular_membership, validate_triangular_params
 
 
 @dataclass(frozen=True)

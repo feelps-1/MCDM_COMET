@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from backend.app.comet.expert_judgment_matrix import ExpertJudgmentMatrix
+from app.comet.expert_judgment_matrix import ExpertJudgmentMatrix
 
 @dataclass(frozen=True)
 class PreferenceVector:

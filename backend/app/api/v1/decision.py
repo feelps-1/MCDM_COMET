@@ -1,15 +1,15 @@
 from fastapi import APIRouter, HTTPException
 
-from backend.app.models.requests import DecisionRequest
-from backend.app.models.responses import DecisionResponse, ScenarioResult
-from backend.app.comet.problem_space import ProblemSpace, Criterion, TriangularFuzzyNumber
-from backend.app.comet.characteristic_objects import generate_characteristic_objects
-from backend.app.comet.expert_judgment_matrix import build_expert_judgment_matrix
-from backend.app.comet.preference_vector import build_preference_vector
-from backend.app.comet.characteristic_function import build_characteristic_function
-from backend.app.comet.fuzzy_inference import infer
-from backend.app.comet.ranking import build_ranking
-from backend.app.services.electrical.ohm_engine import OhmsLawCalculator, LEDCircuit
+from app.models.requests import DecisionRequest
+from app.models.responses import DecisionResponse, ScenarioResult
+from app.comet.problem_space import ProblemSpace, Criterion, TriangularFuzzyNumber
+from app.comet.characteristic_objects import generate_characteristic_objects
+from app.comet.expert_judgment_matrix import build_expert_judgment_matrix
+from app.comet.preference_vector import build_preference_vector
+from app.comet.characteristic_function import build_characteristic_function
+from app.comet.fuzzy_inference import infer
+from app.comet.ranking import build_ranking
+from app.services.electrical.ohm_engine import OhmsLawCalculator, LEDCircuit
 
 router = APIRouter()
 

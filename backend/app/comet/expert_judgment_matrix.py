@@ -2,7 +2,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from itertools import combinations
 
-from backend.app.comet.characteristic_objects import CharacteristicObject, CharacteristicObjectSet
+from app.comet.characteristic_objects import CharacteristicObject, CharacteristicObjectSet
 
 DIAGONAL_PREFERENCE = 0.5
 
