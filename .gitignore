@@ -40,3 +40,5 @@ out/
 # Sistema operacional
 .DS_Store
 Thumbs.db
+
+tsconfig.tsbuildinfo
