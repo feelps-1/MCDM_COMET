@@ -1,172 +1,126 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, CirclePlus, Medal, Play, RotateCcw, Trash2, Trophy } from "lucide-react";
-import { useMemo, useState } from "react";
-import type { Alternativa, Criterio, DirecaoCriterio, RespostaComet } from "@/lib/comet";
+import { useState } from "react";
+import type { DecisionRequest, DecisionResponse } from "@/lib/comet";
 
-type CriterioRascunho = Omit<Criterio, "niveis" | "peso"> & {
-  peso: string;
-  niveisTexto: string;
+type ConfigCircuito = {
+  psu_voltage: string;
+  led_voltage: string;
+  led_current: string;
+  max_current: string;
 };
 
 type AlternativaRascunho = {
   id: string;
   nome: string;
-  valores: Record<string, string>;
+  ddp: string;
+  corrente: string;
 };
 
-const criteriosIniciais: CriterioRascunho[] = [
-  { id: "custo", nome: "Custo", direcao: "custo", peso: "0.30", niveisTexto: "80000, 120000, 180000" },
-  { id: "retorno", nome: "Retorno", direcao: "beneficio", peso: "0.35", niveisTexto: "6, 12, 20" },
-  { id: "risco", nome: "Risco", direcao: "custo", peso: "0.20", niveisTexto: "1, 3, 5" },
-  { id: "impacto", nome: "Impacto", direcao: "beneficio", peso: "0.15", niveisTexto: "1, 3, 5" }
-];
+const configInicial: ConfigCircuito = {
+  psu_voltage: "32",
+  led_voltage: "2",
+  led_current: "1",
+  max_current: "4",
+};
 
 const alternativasIniciais: AlternativaRascunho[] = [
-  { id: "a1", nome: "Competidor 1", valores: { custo: "110000", retorno: "16", risco: "3", impacto: "5" } },
-  { id: "a2", nome: "Competidor 2", valores: { custo: "150000", retorno: "18", risco: "4", impacto: "4" } },
-  { id: "a3", nome: "Competidor 3", valores: { custo: "90000", retorno: "10", risco: "2", impacto: "3" } }
+  { id: "a1",  nome: "A1",  ddp: "5",  corrente: "0.125" },
+  { id: "a2",  nome: "A2",  ddp: "10", corrente: "0.125" },
+  { id: "a3",  nome: "A3",  ddp: "20", corrente: "0.125" },
+  { id: "a4",  nome: "A4",  ddp: "30", corrente: "0.125" },
+  { id: "a5",  nome: "A5",  ddp: "5",  corrente: "1" },
+  { id: "a6",  nome: "A6",  ddp: "10", corrente: "1" },
+  { id: "a7",  nome: "A7",  ddp: "20", corrente: "1" },
+  { id: "a8",  nome: "A8",  ddp: "30", corrente: "1" },
+  { id: "a9",  nome: "A9",  ddp: "5",  corrente: "4" },
+  { id: "a10", nome: "A10", ddp: "10", corrente: "4" },
+  { id: "a11", nome: "A11", ddp: "20", corrente: "4" },
+  { id: "a12", nome: "A12", ddp: "30", corrente: "4" },
 ];
 
-const missoes = ["Criterios", "Alternativas", "Resultado"];
+const missoes = ["Configuracao", "Alternativas", "Resultado"];
+
+function calcularR(ddp: string, corrente: string): string {
+  const u = Number(ddp);
+  const i = Number(corrente);
+  if (!u || !i) return "—";
+  return (u / i).toFixed(4).replace(/\.?0+$/, "") + " Ω";
+}
 
 export default function Home() {
   const [fase, definirFase] = useState(0);
-  const [criterios, definirCriterios] = useState<CriterioRascunho[]>(criteriosIniciais);
+  const [config, definirConfig] = useState<ConfigCircuito>(configInicial);
   const [alternativas, definirAlternativas] = useState<AlternativaRascunho[]>(alternativasIniciais);
-  const [resultado, definirResultado] = useState<RespostaComet | null>(null);
+  const [resultado, definirResultado] = useState<DecisionResponse | null>(null);
   const [erro, definirErro] = useState("");
   const [carregando, definirCarregando] = useState(false);
 
-  const somaPesos = useMemo(
-    () => criterios.reduce((soma, criterio) => soma + Number(criterio.peso || 0), 0),
-    [criterios]
-  );
   const progresso = ((fase + 1) / missoes.length) * 100;
   const vencedor = resultado?.ranking[0];
 
   async function executarAnalise() {
     definirCarregando(true);
     definirErro("");
-
     try {
-      const conteudo = montarConteudo(criterios, alternativas);
+      const payload = montarPayload(config, alternativas);
       const resposta = await fetch("/api/comet/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(conteudo)
+        body: JSON.stringify(payload),
       });
       const corpo = await resposta.json();
-
       if (!resposta.ok) {
-        throw new Error(corpo.erro || "Nao foi possivel calcular o ranking.");
+        throw new Error(corpo.erro ?? corpo.detail ?? "Nao foi possivel calcular o ranking.");
       }
-
       definirResultado(corpo);
       definirFase(2);
-    } catch (erroAnalise) {
-      definirResultado(null);
-      definirErro(erroAnalise instanceof Error ? erroAnalise.message : "Erro inesperado.");
+    } catch (e) {
+      definirErro(e instanceof Error ? e.message : "Erro inesperado.");
     } finally {
       definirCarregando(false);
     }
   }
 
-  function atualizarCriterio(indice: number, alteracao: Partial<CriterioRascunho>) {
-    definirCriterios((atuais) => {
-      const proximos = [...atuais];
-      const idAnterior = proximos[indice].id;
-      proximos[indice] = { ...proximos[indice], ...alteracao };
-
-      if (alteracao.id && alteracao.id !== idAnterior) {
-        definirAlternativas((itens) =>
-          itens.map((alternativa) => {
-            const valores = { ...alternativa.valores, [alteracao.id as string]: alternativa.valores[idAnterior] || "" };
-            delete valores[idAnterior];
-            return { ...alternativa, valores };
-          })
-        );
-      }
-
-      return proximos;
-    });
-    definirResultado(null);
-  }
-
-  function adicionarCriterio() {
-    const id = `criterio-${criterios.length + 1}`;
-    definirCriterios((atuais) => [
-      ...atuais,
-      { id, nome: `Criterio ${atuais.length + 1}`, direcao: "beneficio", peso: "0.10", niveisTexto: "1, 3, 5" }
-    ]);
-    definirAlternativas((atuais) =>
-      atuais.map((alternativa) => ({ ...alternativa, valores: { ...alternativa.valores, [id]: "3" } }))
-    );
-    definirResultado(null);
-  }
-
-  function removerCriterio(indice: number) {
-    if (criterios.length <= 1) {
-      return;
-    }
-
-    const idRemovido = criterios[indice].id;
-    definirCriterios((atuais) => atuais.filter((_, indiceItem) => indiceItem !== indice));
-    definirAlternativas((atuais) =>
-      atuais.map((alternativa) => {
-        const valores = { ...alternativa.valores };
-        delete valores[idRemovido];
-        return { ...alternativa, valores };
-      })
-    );
-    definirResultado(null);
-  }
-
-  function adicionarAlternativa() {
-    const valores = Object.fromEntries(criterios.map((criterio) => [criterio.id, ""]));
-    definirAlternativas((atuais) => [
-      ...atuais,
-      { id: `a${atuais.length + 1}`, nome: `Alternativa ${atuais.length + 1}`, valores }
-    ]);
-    definirResultado(null);
-  }
-
-  function atualizarAlternativa(indice: number, alteracao: Partial<AlternativaRascunho>) {
-    definirAlternativas((atuais) => {
-      const proximas = [...atuais];
-      proximas[indice] = { ...proximas[indice], ...alteracao };
-      return proximas;
-    });
-    definirResultado(null);
-  }
-
-  function atualizarValorAlternativa(indice: number, idCriterio: string, valor: string) {
-    definirAlternativas((atuais) => {
-      const proximas = [...atuais];
-      proximas[indice] = {
-        ...proximas[indice],
-        valores: { ...proximas[indice].valores, [idCriterio]: valor }
-      };
-      return proximas;
-    });
-    definirResultado(null);
-  }
-
   function restaurarExemplo() {
-    definirCriterios(criteriosIniciais);
+    definirConfig(configInicial);
     definirAlternativas(alternativasIniciais);
     definirResultado(null);
     definirErro("");
     definirFase(0);
   }
 
+  function adicionarAlternativa() {
+    const id = `a${Date.now()}`;
+    definirAlternativas((a) => [
+      ...a,
+      { id, nome: `A${a.length + 1}`, ddp: "", corrente: "" },
+    ]);
+    definirResultado(null);
+  }
+
+  function atualizarAlternativa(indice: number, campo: Partial<AlternativaRascunho>) {
+    definirAlternativas((atuais) => {
+      const proximas = [...atuais];
+      proximas[indice] = { ...proximas[indice], ...campo };
+      return proximas;
+    });
+    definirResultado(null);
+  }
+
+  function atualizarConfig(campo: keyof ConfigCircuito, valor: string) {
+    definirConfig((c) => ({ ...c, [campo]: valor }));
+    definirResultado(null);
+  }
+
   return (
     <main>
       <section className="hero">
         <div>
-          <p className="eyebrow">COMET quest</p>
-          <h1>Escolha a melhor alternativa</h1>
-          <p>Complete 3 fases: pesos, candidatos e pódio final.</p>
+          <p className="eyebrow">COMET — Selecao de Resistores</p>
+          <h1>Encontre o resistor ideal</h1>
+          <p>Informe DDP e corrente de cada alternativa e receba o ranking COMET.</p>
         </div>
         <button className="ghost" onClick={restaurarExemplo} title="Restaurar exemplo">
           <RotateCcw size={18} />
@@ -185,8 +139,8 @@ export default function Home() {
         <div className="mission-map">
           {missoes.map((missao, indice) => (
             <button
-              className={indice === fase ? "mission active" : indice < fase ? "mission done" : "mission"}
               key={missao}
+              className={indice === fase ? "mission active" : indice < fase ? "mission done" : "mission"}
               onClick={() => definirFase(indice)}
             >
               <span>{indice + 1}</span>
@@ -198,123 +152,127 @@ export default function Home() {
 
       {erro ? <p className="error">{erro}</p> : null}
 
-      {fase === 0 ? (
+      {/* ── FASE 1: Configuracao do circuito ─────────────────────────────── */}
+      {fase === 0 && (
         <section className="panel">
           <div className="panel-title">
             <div>
               <p className="eyebrow">Fase 1</p>
-              <h2>Defina o que vale pontos</h2>
-            </div>
-            <button className="icon-button" onClick={adicionarCriterio} title="Adicionar criterio">
-              <CirclePlus size={18} />
-            </button>
-          </div>
-
-          <div className="mini-stats">
-            <div>
-              <strong>{criterios.length}</strong>
-              <span>criterios</span>
-            </div>
-            <div>
-              <strong>{somaPesos.toFixed(2)}</strong>
-              <span>peso total</span>
+              <h2>Parametros do circuito</h2>
             </div>
           </div>
-
           <div className="criteria-list">
-            {criterios.map((criterio, indice) => (
-              <article className="criterion-card" key={criterio.id}>
-                <input
-                  aria-label="Nome do criterio"
-                  value={criterio.nome}
-                  onChange={(evento) => atualizarCriterio(indice, { nome: evento.target.value })}
-                />
-                <select
-                  aria-label="Direcao do criterio"
-                  value={criterio.direcao}
-                  onChange={(evento) =>
-                    atualizarCriterio(indice, { direcao: evento.target.value as DirecaoCriterio })
-                  }
-                >
-                  <option value="beneficio">Maior e melhor</option>
-                  <option value="custo">Menor e melhor</option>
-                </select>
-                <input
-                  aria-label="Peso"
-                  type="number"
-                  step="0.01"
-                  value={criterio.peso}
-                  onChange={(evento) => atualizarCriterio(indice, { peso: evento.target.value })}
-                />
-                <input
-                  aria-label="Niveis caracteristicos"
-                  value={criterio.niveisTexto}
-                  onChange={(evento) => atualizarCriterio(indice, { niveisTexto: evento.target.value })}
-                />
-                <button className="icon-button danger" onClick={() => removerCriterio(indice)} title="Remover criterio">
-                  <Trash2 size={17} />
-                </button>
+            {(
+              [
+                { campo: "psu_voltage", rotulo: "Tensao da fonte PSU (V)", hint: "Fallback quando a alternativa nao define DDP" },
+                { campo: "led_voltage", rotulo: "Tensao direta do LED  (V)", hint: "Queda de tensao tipica do LED" },
+                { campo: "led_current", rotulo: "Corrente nominal do LED (A)", hint: "Corrente de operacao ideal" },
+                { campo: "max_current", rotulo: "Corrente maxima (A)", hint: "Limite absoluto de corrente" },
+              ] as { campo: keyof ConfigCircuito; rotulo: string; hint: string }[]
+            ).map(({ campo, rotulo, hint }) => (
+              <article className="criterion-card" key={campo}>
+                <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ fontWeight: 600 }}>{rotulo}</span>
+                  <small style={{ color: "var(--muted)" }}>{hint}</small>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    value={config[campo]}
+                    onChange={(e) => atualizarConfig(campo, e.target.value)}
+                  />
+                </label>
               </article>
             ))}
           </div>
         </section>
-      ) : null}
+      )}
 
-      {fase === 1 ? (
+      {/* ── FASE 2: Alternativas ─────────────────────────────────────────── */}
+      {fase === 1 && (
         <section className="panel">
           <div className="panel-title">
             <div>
               <p className="eyebrow">Fase 2</p>
-              <h2>Cadastre os competidores</h2>
+              <h2>Alternativas de resistor</h2>
             </div>
             <button className="icon-button" onClick={adicionarAlternativa} title="Adicionar alternativa">
               <CirclePlus size={18} />
             </button>
           </div>
-
+          <div className="mini-stats">
+            <div>
+              <strong>{alternativas.length}</strong>
+              <span>alternativas</span>
+            </div>
+          </div>
           <div className="alternative-grid">
-            {alternativas.map((alternativa, indice) => (
-              <article className="candidate-card" key={alternativa.id}>
+            {alternativas.map((alt, indice) => (
+              <article className="candidate-card" key={alt.id}>
                 <div className="candidate-head">
                   <input
-                    aria-label="Nome da alternativa"
-                    value={alternativa.nome}
-                    onChange={(evento) => atualizarAlternativa(indice, { nome: evento.target.value })}
+                    aria-label="Nome"
+                    placeholder="Nome"
+                    value={alt.nome}
+                    onChange={(e) => atualizarAlternativa(indice, { nome: e.target.value })}
                   />
                   <button
                     className="icon-button danger"
-                    onClick={() => definirAlternativas((atuais) => atuais.filter((_, indiceItem) => indiceItem !== indice))}
+                    onClick={() => {
+                      definirAlternativas((a) => a.filter((_, i) => i !== indice));
+                      definirResultado(null);
+                    }}
                     title="Remover alternativa"
                   >
                     <Trash2 size={17} />
                   </button>
                 </div>
                 <div className="score-fields">
-                  {criterios.map((criterio) => (
-                    <label key={criterio.id}>
-                      <span>{criterio.nome}</span>
-                      <input
-                        aria-label={`Valor de ${criterio.nome}`}
-                        type="number"
-                        value={alternativa.valores[criterio.id] ?? ""}
-                        onChange={(evento) => atualizarValorAlternativa(indice, criterio.id, evento.target.value)}
-                      />
-                    </label>
-                  ))}
+                  <label>
+                    <span>DDP / U (V)</span>
+                    <input
+                      type="number"
+                      step="any"
+                      min="0"
+                      placeholder="ex: 5"
+                      value={alt.ddp}
+                      onChange={(e) => atualizarAlternativa(indice, { ddp: e.target.value })}
+                    />
+                  </label>
+                  <label>
+                    <span>Corrente / I (A)</span>
+                    <input
+                      type="number"
+                      step="any"
+                      min="0"
+                      placeholder="ex: 0.125"
+                      value={alt.corrente}
+                      onChange={(e) => atualizarAlternativa(indice, { corrente: e.target.value })}
+                    />
+                  </label>
+                  <label>
+                    <span>R = U/I</span>
+                    <input readOnly value={calcularR(alt.ddp, alt.corrente)} />
+                  </label>
                 </div>
               </article>
             ))}
           </div>
         </section>
-      ) : null}
+      )}
 
-      {fase === 2 ? (
+      {/* ── FASE 3: Resultado ────────────────────────────────────────────── */}
+      {fase === 2 && (
         <section className="results">
           <div className="winner-panel">
             <p className="eyebrow">Fase 3</p>
             <Trophy size={46} />
-            <h2>{vencedor ? vencedor.nome : "Pronto para revelar o vencedor"}</h2>
-            <strong>{vencedor ? `${(vencedor.pontuacao * 100).toFixed(1)}%` : "?"}</strong>
+            <h2>{vencedor ? vencedor.name : "Pronto para revelar o vencedor"}</h2>
+            <strong>
+              {vencedor
+                ? `R = ${vencedor.resistor_ohm.toFixed(4).replace(/\.?0+$/, "")} Ω`
+                : "?"}
+            </strong>
           </div>
 
           <div className="panel">
@@ -329,13 +287,18 @@ export default function Home() {
             {resultado ? (
               <div className="ranking-list">
                 {resultado.ranking.map((item) => (
-                  <article className="ranking-item" key={item.id}>
-                    <div className="rank-badge">{item.posicao}</div>
-                    <div>
-                      <h3>{item.nome}</h3>
-                      <progress max={1} value={item.pontuacao} />
+                  <article className="ranking-item" key={item.name}>
+                    <div className="rank-badge">{item.rank}</div>
+                    <div style={{ flex: 1 }}>
+                      <h3>{item.name}</h3>
+                      <small style={{ color: "var(--muted)" }}>
+                        R = {item.resistor_ohm.toFixed(4).replace(/\.?0+$/, "")} Ω
+                        &nbsp;|&nbsp;
+                        P = {item.power_w.toFixed(4).replace(/\.?0+$/, "")} W
+                      </small>
+                      <progress max={1} value={item.preference} />
                     </div>
-                    <strong>{(item.pontuacao * 100).toFixed(1)}%</strong>
+                    <strong>{(item.preference * 100).toFixed(1)}%</strong>
                   </article>
                 ))}
               </div>
@@ -344,10 +307,10 @@ export default function Home() {
             )}
           </div>
         </section>
-      ) : null}
+      )}
 
       <nav className="bottom-actions">
-        <button className="ghost" onClick={() => definirFase((atual) => Math.max(0, atual - 1))} disabled={fase === 0}>
+        <button className="ghost" onClick={() => definirFase((f) => Math.max(0, f - 1))} disabled={fase === 0}>
           <ChevronLeft size={18} />
           Voltar
         </button>
@@ -359,7 +322,7 @@ export default function Home() {
         ) : (
           <button className="primary" onClick={executarAnalise} disabled={carregando}>
             <Play size={18} />
-            {carregando ? "Calculando" : "Calcular COMET"}
+            {carregando ? "Calculando..." : "Calcular COMET"}
           </button>
         )}
       </nav>
@@ -367,25 +330,18 @@ export default function Home() {
   );
 }
 
-function montarConteudo(criterios: CriterioRascunho[], alternativas: AlternativaRascunho[]) {
-  const criteriosFormatados: Criterio[] = criterios.map((criterio) => ({
-    id: criterio.id.trim(),
-    nome: criterio.nome.trim(),
-    direcao: criterio.direcao,
-    peso: Number(criterio.peso),
-    niveis: criterio.niveisTexto
-      .split(",")
-      .map((valor) => Number(valor.trim()))
-      .filter(Number.isFinite)
-  }));
-
-  const alternativasFormatadas: Alternativa[] = alternativas.map((alternativa, indice) => ({
-    id: alternativa.id || `a${indice + 1}`,
-    nome: alternativa.nome,
-    valores: Object.fromEntries(
-      criteriosFormatados.map((criterio) => [criterio.id, Number(alternativa.valores[criterio.id])])
-    )
-  }));
-
-  return { criterios: criteriosFormatados, alternativas: alternativasFormatadas };
+function montarPayload(config: ConfigCircuito, alternativas: AlternativaRascunho[]): DecisionRequest {
+  const led_v = Number(config.led_voltage);
+  return {
+    psu_voltage: Number(config.psu_voltage),
+    led_voltage: led_v,
+    led_current: Number(config.led_current),
+    max_current: Number(config.max_current),
+    alternatives: alternativas.map((alt, i) => ({
+      name: alt.nome || `A${i + 1}`,
+      target_current: Number(alt.corrente),
+      source_voltage: alt.ddp ? led_v + Number(alt.ddp) : undefined,
+    })),
+  };
 }
+

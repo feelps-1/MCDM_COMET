@@ -1,4 +1,33 @@
-//código placeholder de COMET feito por IA
+// Tipos que espelham exatamente o contrato do backend Python
+
+export type AlternativeInput = {
+  name: string;
+  target_current: number;
+  source_voltage?: number;
+};
+
+export type DecisionRequest = {
+  psu_voltage: number;
+  led_voltage: number;
+  led_current: number;
+  max_current: number;
+  alternatives: AlternativeInput[];
+};
+
+export type ScenarioResult = {
+  name: string;
+  resistor_ohm: number;
+  power_w: number;
+  preference: number;
+  rank: number;
+};
+
+export type DecisionResponse = {
+  winner: string;
+  ranking: ScenarioResult[];
+};
+
+// ── tipos legados abaixo (não usados na integração) ──────────────────────────
 
 export type DirecaoCriterio = "beneficio" | "custo";
 
