@@ -1,13 +1,10 @@
-def validate_triangular_params(a: float, b: float, c: float) -> None:
+def triangular_membership(x: float, a: float, b: float, c: float) -> float:
+
     if not (a <= b <= c):
         raise ValueError("Invalid parameters: a <= b <= c must hold.")
 
     if a == b == c:
         raise ValueError("Invalid parameters: a, b, and c can't all be equal.")
-
-
-def triangular_membership(x: float, a: float, b: float, c: float) -> float:
-    validate_triangular_params(a, b, c)
 
     if a == b: 
         if x <= a:

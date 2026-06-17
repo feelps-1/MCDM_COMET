@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.v1.decision import router
+from backend.app.api.v1.decision import router
 
 origins = [
     "http://localhost:3000",
@@ -23,6 +23,6 @@ app.add_middleware(
 
 app.include_router(
     router,
-    prefix="/v1",
+    prefix="/api/v1",
     tags=["decision"]
 )
