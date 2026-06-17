@@ -19,7 +19,14 @@ export async function POST(requisicao: Request) {
 
     const resposta = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        // Pass bypass token so internal server-to-server calls are not blocked
+        // by Vercel Deployment Protection on preview deployments.
+        ...(process.env.VERCEL_AUTOMATION_BYPASS_SECRET
+          ? { "x-vercel-protection-bypass": process.env.VERCEL_AUTOMATION_BYPASS_SECRET }
+          : {}),
+      },
       body: JSON.stringify(corpo),
     });
 

@@ -12,6 +12,7 @@
         }
     },
     "env": {
-        "CORS_ORIGIN": "https://$VERCEL_URL"
+        "CORS_ORIGIN": "https://$VERCEL_URL",
+        "VERCEL_AUTOMATION_BYPASS_SECRET": "sU4BIpdwUFMIl9Qgz57aHpV2FClSVyPQ"
     }
 }
