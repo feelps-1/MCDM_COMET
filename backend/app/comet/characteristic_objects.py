@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from itertools import product
 
-from comet.problem_space import ProblemSpace, TriangularFuzzyNumber
+from backend.app.comet.problem_space import ProblemSpace, TriangularFuzzyNumber
 
 
 @dataclass(frozen=True)
