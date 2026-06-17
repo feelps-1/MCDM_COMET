@@ -1,13 +1,20 @@
 import { NextResponse } from "next/server";
 import type { DecisionRequest } from "@/lib/comet";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8000";
+// In production on Vercel, the backend service is reachable at /_/backend
+// (routePrefix defined in vercel.json). VERCEL_URL is set automatically by Vercel.
+// In local development, fall back to localhost:8000.
+function backendUrl(): string {
+  if (process.env.BACKEND_URL) return process.env.BACKEND_URL;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}/_/backend`;
+  return "http://localhost:8000";
+}
 
 export async function POST(requisicao: Request) {
   try {
     const corpo = (await requisicao.json()) as DecisionRequest;
 
-    const resposta = await fetch(`${BACKEND_URL}/api/v1/decision`, {
+    const resposta = await fetch(`${backendUrl()}/api/v1/decision`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(corpo),

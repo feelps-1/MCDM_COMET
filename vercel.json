@@ -1,0 +1,17 @@
+{
+    "experimentalServices": {
+        "frontend": {
+            "root": "frontend",
+            "routePrefix": "/",
+            "framework": "nextjs"
+        },
+        "backend": {
+            "root": "backend",
+            "routePrefix": "/_/backend",
+            "framework": "python"
+        }
+    },
+    "env": {
+        "CORS_ORIGIN": "https://$VERCEL_URL"
+    }
+}

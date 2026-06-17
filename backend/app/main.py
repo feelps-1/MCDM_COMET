@@ -1,11 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import os
 
 from app.api.v1.decision import router
 
-origins = [
-    "http://localhost:3000",
-]
+# Allow localhost in dev and any Vercel deployment domain in production.
+# CORS_ORIGIN env var can override both (comma-separated list).
+_raw = os.getenv("CORS_ORIGIN", "http://localhost:3000")
+origins = [o.strip() for o in _raw.split(",") if o.strip()]
 
 app = FastAPI(
     title="COMET Decision API",
